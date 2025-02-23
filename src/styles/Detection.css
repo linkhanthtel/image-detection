@@ -1,0 +1,138 @@
+.detection-container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #0f1729 0%, #1a1f35 100%);
+  overflow: hidden;
+  padding-top: 5vh;
+}
+
+.webcam, .canvas {
+  position: relative;
+  width: 90%;
+  max-height: 60vh;
+  border-radius: 20px;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.webcam.active, .canvas.active {
+  opacity: 1;
+  animation: scanEffect 2s linear infinite;
+}
+
+.canvas {
+  position: absolute;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.start-button {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 20px 40px;
+  font-size: 1.2rem;
+  background: transparent;
+  border: 2px solid #00fff2;
+  color: #00fff2;
+  border-radius: 30px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.start-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 242, 0.2), transparent);
+  transition: 0.5s;
+}
+
+.start-button:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 242, 0.5);
+  transform: scale(1.05);
+}
+
+.start-button:hover::before {
+  left: 100%;
+}
+
+.start-button.hidden {
+  transform: scale(0);
+  opacity: 0;
+}
+
+.loading {
+  color: #00fff2;
+  font-size: 24px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes scanEffect {
+  0% {
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@media (max-width: 1023px) {
+  .detection-container {
+    padding-top: 3vh;
+  }
+
+  .webcam, .canvas {
+    width: 95%;
+    max-height: 50vh;
+  }
+
+  .canvas {
+    top: 3vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .detection-container {
+    padding-top: 2vh;
+  }
+
+  .webcam, .canvas {
+    width: 98%;
+    max-height: 45vh;
+  }
+
+  .canvas {
+    top: 2vh;
+  }
+
+  .start-button {
+    padding: 15px 30px;
+    font-size: 1rem;
+    bottom: 15px;
+  }
+}
