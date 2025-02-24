@@ -63,7 +63,6 @@
 
 .start-button:hover {
   box-shadow: 0 0 20px rgba(0, 255, 242, 0.5);
-  transform: scale(1.05);
 }
 
 .start-button:hover::before {
