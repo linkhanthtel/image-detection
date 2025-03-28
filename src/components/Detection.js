@@ -42,8 +42,17 @@ const Detection = () => {
     );
   };
 
+  // Add new state for detection timing
+  const [lastDetectionTime, setLastDetectionTime] = useState(0);
+  const DETECTION_COOLDOWN = 2000; // 2 seconds between detections
+
   const detect = async () => {
     if (webcamRef.current && model) {
+      const currentTime = Date.now();
+      if (currentTime - lastDetectionTime < DETECTION_COOLDOWN) {
+        return; // Skip if not enough time has passed
+      }
+
       // Get video properties
       const video = webcamRef.current.video;
       const videoWidth = webcamRef.current.video.videoWidth;
@@ -55,42 +64,26 @@ const Detection = () => {
 
       // Make detection
       const predictions = await model.detect(video);
-
+      
       // Get canvas context for drawing
       const ctx = canvasRef.current.getContext('2d');
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-      // Draw detections
-      predictions.forEach(prediction => {
-        const [x, y, width, height] = prediction.bbox;
-        ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
-        ctx.fillStyle = '#00ff00';
-        ctx.fillText(
-          `${prediction.class} ${Math.round(prediction.score * 100)}%`,
-          x,
-          y > 10 ? y - 5 : 10
-        );
-      });
+      // Take only the highest confidence prediction
+      const topPrediction = predictions
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 1);
 
-      // Filter predictions based on selected filters
-      const filteredPredictions = predictions.filter(pred => 
+      // Filter and draw the single detection
+      const filteredPrediction = topPrediction.filter(pred => 
         selectedFilters.length === 0 || selectedFilters.includes(pred.class)
       );
 
-      // Update detection history
-      filteredPredictions.forEach(pred => {
-        setDetectionHistory(prev => [{
-          object: pred.class,
-          confidence: Math.round(pred.score * 100),
-          timestamp: new Date().toLocaleTimeString()
-        }, ...prev.slice(0, 99)]); // Keep last 100 detections
-      });
-
-      // Draw detections with custom styles
-      filteredPredictions.forEach(prediction => {
+      if (filteredPrediction.length > 0) {
+        const prediction = filteredPrediction[0];
         const [x, y, width, height] = prediction.bbox;
+        
+        // Draw detection with custom styles
         ctx.strokeStyle = '#00ff00';
         ctx.lineWidth = 3;
         ctx.strokeRect(x, y, width, height);
@@ -110,9 +103,32 @@ const Detection = () => {
           x + 5,
           y - 5
         );
-      });
+
+        // Update detection history
+        setDetectionHistory(prev => [{
+          object: prediction.class,
+          confidence: Math.round(prediction.score * 100),
+          timestamp: new Date().toLocaleTimeString()
+        }, ...prev.slice(0, 99)]);
+
+        // Update last detection time
+        setLastDetectionTime(currentTime);
+      }
     }
   };
+
+  // Update detection interval effect
+  useEffect(() => {
+    let interval;
+    if (isDetecting && webcamRef.current?.video?.readyState === 4) {
+      interval = setInterval(detect, DETECTION_COOLDOWN);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isDetecting, model, selectedFilters, webcamRef.current]);
 
   const startDetection = () => {
     setIsDetecting(true);
@@ -128,16 +144,119 @@ const Detection = () => {
     return () => clearInterval(interval);
   }, [model, detectionInterval, selectedFilters, isDetecting]);
 
+  // Add new states for webcam controls
+  const [cameras, setCameras] = useState([]);
+  const [selectedCamera, setSelectedCamera] = useState(null);
+  // Update webcamConfig state with more size options
+  const [webcamConfig, setWebcamConfig] = useState({
+    width: 1280,  // Changed default to HD
+    height: 720,
+    facingMode: 'user',
+    mirrored: true,
+    aspectRatio: 16/9
+  });
+
+  // Update WebcamControls component
+  const WebcamControls = ({ cameras, selectedCamera, setSelectedCamera, webcamConfig, setWebcamConfig }) => (
+    <div className="webcam-controls">
+      {/* <select 
+        id="camera-select"
+        name="camera-select"
+        value={selectedCamera || ''} 
+        onChange={(e) => setSelectedCamera(e.target.value)}
+      >
+        {cameras.map(camera => (
+          <option key={camera.deviceId} value={camera.deviceId}>
+            {camera.label || `Camera ${cameras.indexOf(camera) + 1}`}
+          </option>
+        ))}
+      </select> */}
+      <select 
+        id="resolution-select"
+        name="resolution-select"
+        value={`${webcamConfig.width}x${webcamConfig.height}`}
+        onChange={(e) => {
+          const [width, height] = e.target.value.split('x').map(Number);
+          const aspectRatio = width / height;
+          setWebcamConfig(prev => ({ ...prev, width, height, aspectRatio }));
+        }}
+      >
+        <option value="640x480">480p (4:3)</option>
+        <option value="854x480">480p (16:9)</option>
+        <option value="1280x720">720p HD</option>
+        <option value="1920x1080">1080p Full HD</option>
+        <option value="2560x1440">1440p QHD</option>
+        <option value="3840x2160">2160p 4K</option>
+      </select>
+      <select
+        id="aspect-ratio-select"
+        name="aspect-ratio-select"
+        value={webcamConfig.aspectRatio}
+        onChange={(e) => {
+          const aspectRatio = parseFloat(e.target.value);
+          const height = webcamConfig.width / aspectRatio;
+          setWebcamConfig(prev => ({ ...prev, aspectRatio, height }));
+        }}
+      >
+        <option value={16/9}>16:9 Widescreen</option>
+        <option value={4/3}>4:3 Standard</option>
+        <option value={21/9}>21:9 Ultrawide</option>
+      </select>
+      <button 
+        id="mirror-button"
+        onClick={() => setWebcamConfig(prev => ({ ...prev, mirrored: !prev.mirrored }))}
+      >
+        {webcamConfig.mirrored ? 'Unmirror' : 'Mirror'}
+      </button>
+      <button 
+        id="flip-button"
+        onClick={() => {
+          setWebcamConfig(prev => ({
+            ...prev,
+            facingMode: prev.facingMode === 'user' ? 'environment' : 'user'
+          }));
+        }}
+      >
+        Flip Camera
+      </button>
+    </div>
+  );
+
+  // Update Webcam component
   return (
     <div className="detection-container">
       {isLoading ? (
         <div className="loading">Loading model...</div>
       ) : (
         <>
+          <WebcamControls 
+            cameras={cameras}
+            selectedCamera={selectedCamera}
+            setSelectedCamera={setSelectedCamera}
+            webcamConfig={webcamConfig}
+            setWebcamConfig={setWebcamConfig}
+          />
           <Webcam
             ref={webcamRef}
             muted={true}
             className={`webcam ${isDetecting ? 'active' : ''}`}
+            videoConstraints={{
+              deviceId: selectedCamera,
+              width: webcamConfig.width,
+              height: webcamConfig.height,
+              facingMode: webcamConfig.facingMode,
+              aspectRatio: webcamConfig.aspectRatio
+            }}
+            mirrored={webcamConfig.mirrored}
+            screenshotFormat="image/jpeg"
+            screenshotQuality={1}
+            onUserMedia={() => {
+              if (webcamRef.current?.video) {
+                webcamRef.current.video.addEventListener('loadeddata', () => {
+                  console.log('Camera ready');
+                });
+              }
+            }}
           />
           <canvas
             ref={canvasRef}

@@ -9,6 +9,52 @@
   padding-top: 5vh;
 }
 
+.webcam-controls {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+  background: rgba(15, 23, 41, 0.9);
+  padding: 15px;
+  border-radius: 15px;
+  border: 1px solid rgba(0, 255, 242, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+.webcam-controls select,
+.webcam-controls button {
+  padding: 10px 15px;
+  background: rgba(0, 255, 242, 0.1);
+  border: 1px solid rgba(0, 255, 242, 0.3);
+  border-radius: 8px;
+  color: #00fff2;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.webcam-controls select {
+  min-width: 140px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300fff2' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.webcam-controls button:hover,
+.webcam-controls select:hover {
+  background-color: rgba(0, 255, 242, 0.2);
+  box-shadow: 0 0 15px rgba(0, 255, 242, 0.3);
+}
+
+.webcam-controls button:active {
+  transform: scale(0.95);
+}
+
 .webcam, .canvas {
   position: relative;
   width: 90%;
@@ -17,6 +63,7 @@
   box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 80px; /* Added to accommodate controls */
 }
 
 .webcam.active, .canvas.active {
@@ -133,5 +180,39 @@
     padding: 15px 30px;
     font-size: 1rem;
     bottom: 15px;
+  }
+}
+
+.webcam {
+  width: auto;
+  height: auto;
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+.canvas {
+  width: auto;
+  height: auto;
+  max-width: 90vw;
+  max-height: 80vh;
+}
+
+.webcam-controls select,
+.webcam-controls button {
+  min-width: 120px;
+  max-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .webcam, .canvas {
+    max-width: 95vw;
+    max-height: 70vh;
+  }
+  
+  .webcam-controls select,
+  .webcam-controls button {
+    min-width: 100px;
+    font-size: 12px;
   }
 }
