@@ -74,6 +74,7 @@
   background: rgba(0, 255, 242, 0.3);
   border-radius: 2px;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .slider-container input[type="range"]::-webkit-slider-thumb {
