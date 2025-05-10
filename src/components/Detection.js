@@ -50,31 +50,24 @@ const Detection = () => {
     if (webcamRef.current && model) {
       const currentTime = Date.now();
       if (currentTime - lastDetectionTime < DETECTION_COOLDOWN) {
-        return; // Skip if not enough time has passed
+        return;
       }
 
-      // Get video properties
       const video = webcamRef.current.video;
       const videoWidth = webcamRef.current.video.videoWidth;
       const videoHeight = webcamRef.current.video.videoHeight;
 
-      // Set canvas dimensions
       canvasRef.current.width = videoWidth;
       canvasRef.current.height = videoHeight;
 
-      // Make detection
       const predictions = await model.detect(video);
-      
-      // Get canvas context for drawing
       const ctx = canvasRef.current.getContext('2d');
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-      // Take only the highest confidence prediction
       const topPrediction = predictions
         .sort((a, b) => b.score - a.score)
         .slice(0, 1);
 
-      // Filter and draw the single detection
       const filteredPrediction = topPrediction.filter(pred => 
         selectedFilters.length === 0 || selectedFilters.includes(pred.class)
       );
@@ -83,35 +76,67 @@ const Detection = () => {
         const prediction = filteredPrediction[0];
         const [x, y, width, height] = prediction.bbox;
         
-        // Draw detection with custom styles
-        ctx.strokeStyle = '#00ff00';
+        // Enhanced box drawing
+        ctx.strokeStyle = '#00fff2';
         ctx.lineWidth = 3;
         ctx.strokeRect(x, y, width, height);
         
-        // Add gradient background for text
-        const gradient = ctx.createLinearGradient(x, y, x + width, y);
-        gradient.addColorStop(0, 'rgba(0, 255, 0, 0.8)');
-        gradient.addColorStop(1, 'rgba(0, 255, 0, 0.2)');
+        // Calculate object dimensions relative to video size
+        const objectWidth = Math.round((width / videoWidth) * 100);
+        const objectHeight = Math.round((height / videoHeight) * 100);
+        const objectArea = Math.round(objectWidth * objectHeight);
+        
+        // Create info box
+        const infoBoxHeight = 80;
+        const gradient = ctx.createLinearGradient(x, y - infoBoxHeight, x + width, y);
+        gradient.addColorStop(0, 'rgba(0, 255, 242, 0.9)');
+        gradient.addColorStop(1, 'rgba(0, 255, 242, 0.3)');
         
         ctx.fillStyle = gradient;
-        ctx.fillRect(x, y - 20, width, 20);
+        ctx.fillRect(x, y - infoBoxHeight, width, infoBoxHeight);
         
+        // Draw detailed information
         ctx.fillStyle = '#ffffff';
-        ctx.font = '16px Arial';
-        ctx.fillText(
-          `${prediction.class} ${Math.round(prediction.score * 100)}%`,
-          x + 5,
-          y - 5
-        );
+        ctx.font = 'bold 14px Arial';
+        ctx.textBaseline = 'top';
+        
+        const infoLines = [
+          `Object: ${prediction.class}`,
+          `Confidence: ${Math.round(prediction.score * 100)}%`,
+          `Size: ${objectWidth}% × ${objectHeight}%`,
+          `Area: ${objectArea}% of frame`
+        ];
+        
+        infoLines.forEach((line, index) => {
+          ctx.fillText(line, x + 5, y - infoBoxHeight + (index * 18) + 5);
+        });
 
-        // Update detection history
+        // Draw position indicators
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        const relativeX = Math.round((centerX / videoWidth) * 100);
+        const relativeY = Math.round((centerY / videoHeight) * 100);
+
+        // Draw crosshair at object center
+        ctx.beginPath();
+        ctx.strokeStyle = '#00fff2';
+        ctx.lineWidth = 1;
+        ctx.moveTo(centerX - 10, centerY);
+        ctx.lineTo(centerX + 10, centerY);
+        ctx.moveTo(centerX, centerY - 10);
+        ctx.lineTo(centerX, centerY + 10);
+        ctx.stroke();
+
+        // Update detection history with enhanced information
         setDetectionHistory(prev => [{
           object: prediction.class,
           confidence: Math.round(prediction.score * 100),
+          position: `${relativeX}%, ${relativeY}%`,
+          size: `${objectWidth}% × ${objectHeight}%`,
+          area: `${objectArea}%`,
           timestamp: new Date().toLocaleTimeString()
         }, ...prev.slice(0, 99)]);
 
-        // Update last detection time
         setLastDetectionTime(currentTime);
       }
     }
